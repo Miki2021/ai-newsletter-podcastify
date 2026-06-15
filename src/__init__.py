@@ -1,0 +1,1 @@
+"""Paquete src: módulos del pipeline CastAI (Gmail, scraping, guion, TTS)."""

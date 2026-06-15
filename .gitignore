@@ -1,0 +1,25 @@
+# --- Credenciales y secretos (NUNCA subir a git) ---
+.env
+credentials.json        # client secret OAuth descargado de Google Cloud
+token.json              # token de usuario generado tras el primer login
+*.pem
+*.key
+
+# --- Salida generada ---
+podcasts_diarios/*       # podcasts .mp3 y guiones generados
+output/                 # carpeta legacy por si OUTPUT_DIR la sobreescribe
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+
+# --- IDE ---
+.idea/
+.vscode/
+credentials.json
+token.json

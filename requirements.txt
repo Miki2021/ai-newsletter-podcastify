@@ -1,0 +1,20 @@
+# --- API de Google Gemini (guionizado + TTS) ---
+# SDK oficial nuevo de Google GenAI. Expone tanto generación de texto
+# como los modelos de Text-to-Speech (gemini-2.5-*-preview-tts).
+google-genai>=1.60.0
+
+# --- Gmail API (lectura segura de correos vía OAuth2) ---
+google-api-python-client>=2.197.0
+google-auth-oauthlib>=1.2.1
+google-auth-httplib2>=0.4.0
+
+# --- Web scraping selectivo ---
+# trafilatura extrae el texto principal de los artículos descartando
+# anuncios, menús y boilerplate. Requests para descargar el HTML crudo.
+trafilatura>=2.1.0
+requests>=2.34.2
+
+# --- Audio ---
+# Gemini TTS devuelve PCM crudo; pydub lo empaqueta y exporta a .mp3.
+# OJO: pydub necesita ffmpeg instalado en el sistema para escribir MP3.
+pydub>=0.25.1
