@@ -19,7 +19,7 @@ import argparse
 import logging
 import sys
 from datetime import datetime
-
+import pandas as pd
 
 from config import Config
 from src.gmail_client import GmailClient
@@ -74,6 +74,8 @@ def run(dry_run: bool = False) -> int:
         )
         articles_by_email.append(articles)
 
+
+
     # --- Corte dry-run: informar y salir antes de Gemini/TTS ---
     if dry_run:
         total_articles = sum(len(a) for a in articles_by_email)
@@ -98,7 +100,7 @@ def run(dry_run: bool = False) -> int:
     # --- Paso 3: Guionizado con Gemini ---
     log.info("Generando guion con Gemini (%s)...", config.gemini_text_model)
     writer = ScriptWriter(config.gemini_api_key, config.gemini_text_model)
-    script = writer.build_script(emails, articles_by_email)
+    script = writer.build_script(emails, articles_by_email, output_dir=config.output_dir)
 
     # --- Paso 5a: guardar el guion (texto) ---
     timestamp = datetime.now().strftime("%Y-%m-%d")

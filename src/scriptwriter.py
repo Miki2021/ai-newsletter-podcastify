@@ -11,6 +11,8 @@ Estrategia en dos pasos para evitar alucinaciones:
 from __future__ import annotations
 
 import logging
+from datetime import datetime
+from pathlib import Path
 
 from google import genai
 from google.genai import types
@@ -38,6 +40,7 @@ class ScriptWriter:
         self,
         emails: list[NewsletterEmail],
         articles_by_email: list[list[Article]],
+        output_dir: Path | None = None,
     ) -> str:
         """Orquesta los dos pasos y devuelve el guion final listo para TTS.
 
@@ -50,8 +53,6 @@ class ScriptWriter:
             try:
                 summary = self._summarize_email(email, articles)
             except Exception as exc:
-                # Un correo que falla no aborta el pipeline: lo saltamos y
-                # continuamos con el resto para aprovechar lo que ya tenemos.
                 log.warning(
                     "Error resumiendo '%s' — se omite: %s",
                     email.subject[:60], exc,
@@ -67,16 +68,33 @@ class ScriptWriter:
             )
 
         # --- Paso 3b: guion final ---
-        return self._assemble_script(summaries)
+        return self._assemble_script(summaries, output_dir=output_dir)
+
+    def remove_duplicate_topics(self, script: str) -> str:
+        """Asks Gemini to remove duplicate/near-duplicate news topics from the script."""
+        prompt = (
+            "Este es el guion de un podcast de noticias. Analiza su contenido y elimina "
+            "las noticias, historias o temas que aparezcan duplicados o sean muy similares "
+            "entre sí, conservando la versión más completa de cada uno. "
+            "Devuelve el guion resultante con exactamente el mismo estilo, tono y formato, "
+            "sin añadir ni quitar nada más. Solo elimina los duplicados.\n\n"
+            + script
+        )
+        response = gemini_retry(lambda: self._client.models.generate_content(
+            model=self._model,
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.0),
+        ))
+        return (response.text or "").strip() or script
 
     # ------------------------------------------------------------------ #
     # Pasos internos
     # ------------------------------------------------------------------ #
+
     def _summarize_email(
         self, email: NewsletterEmail, articles: list[Article]
     ) -> str:
         """Resume un único correo + sus artículos enlazados."""
-        # Concatenamos el cuerpo del correo y el texto de los artículos.
         article_blocks = "\n\n".join(
             f"[Artículo: {a.url}]\n{a.text}" for a in articles
         )
@@ -97,15 +115,27 @@ class ScriptWriter:
         ))
         return (response.text or "").strip()
 
-    def _assemble_script(self, summaries: list[str]) -> str:
+    def _assemble_script(
+        self, summaries: list[str], output_dir: Path | None = None
+    ) -> str:
         """Convierte la lista de resúmenes en el guion hablado final."""
         joined = "\n\n---\n\n".join(
             f"RESUMEN {i + 1}:\n{s}" for i, s in enumerate(summaries)
         )
 
+        deduplicated_summary = self.remove_duplicate_topics(joined)
+
+        if output_dir is not None:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            date_str = datetime.now().strftime("%Y-%m-%d")
+            raw_path = output_dir / f"raw-summary-{date_str}.txt"
+            raw_path.write_text(deduplicated_summary, encoding="utf-8")
+            log.info("Raw summary guardado en %s", raw_path)
+
+
         response = gemini_retry(lambda: self._client.models.generate_content(
             model=self._model,
-            contents=joined,
+            contents=deduplicated_summary,
             config=types.GenerateContentConfig(
                 system_instruction=SCRIPT_SYSTEM_PROMPT,
                 temperature=0.7,

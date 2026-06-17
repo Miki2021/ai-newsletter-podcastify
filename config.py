@@ -43,7 +43,6 @@ class Config:
     gmail_credentials_path: Path
     gmail_token_path: Path
     newsletter_senders: list[str]
-    lookback_hours: int
 
     # --- Salida ---
     output_dir: Path = field(default_factory=lambda: Path("podcasts_diarios"))
